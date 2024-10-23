@@ -36,7 +36,7 @@ volcanoController.get("/:volcanoId/details", async (req, res) => {
     const volcano = await volcanoService.getOne(req.params.volcanoId).lean();
     const isOwner = volcano.owner.toString() === req.user?._id;
 
-    const isVoted = volcano.voteList?.some(userId => userId == req.user?._id);
+    const isVoted = volcano.voteList?.some(userId => userId.toString() === req.user?._id);
     const volcanoCount = volcano.voteList?.length || 0;
 
     res.render("volcanoes/details", { volcano, isVoted, isOwner, volcanoCount, title: "Volcano Details Page" });
@@ -50,23 +50,6 @@ volcanoController.get("/search", async (req, res) => {
     res.render("volcanoes/search", { volcanoes, volcanoTypes, searchFilter, title: "Volcanoes Search Page" });
 });
 
-volcanoController.get("/:volcanoId/vote", isAuth, async (req, res) => {
-    const volcanoId = req.params.volcanoId;
-    const userId = req.user._id;
-
-    if (isVolcanoOwner(volcanoId, userId)) {
-        return res.redirect(`/404`)
-    }
-
-    try {
-        await volcanoService.vote(volcanoId, userId);
-
-        res.redirect(`/volcanoes/${volcanoId}/details`);
-    } catch (err) {
-        console.log(err.message);
-
-    }
-});
 
 volcanoController.get("/:volcanoId/edit", isAuth, async (req, res) => {
     const volcano = await volcanoService.getOne(req.params.volcanoId).lean();
@@ -84,7 +67,7 @@ volcanoController.post("/:volcanoId/edit", isAuth, async (req, res) => {
     const volcanoData = req.body;
     const volcanoId = req.params.volcanoId;
 
-    if (!isVolcanoOwner(volcanoId, req.user._id)) {
+    if (!(await isVolcanoOwner(req.params.volcanoId, req.user._id))) {
         return res.redirect("/404")
     }
 
@@ -99,8 +82,29 @@ volcanoController.post("/:volcanoId/edit", isAuth, async (req, res) => {
     }
 });
 
+volcanoController.get("/:volcanoId/vote", isAuth, async (req, res) => {
+    const volcanoId = req.params.volcanoId;
+    const userId = req.user._id;
+
+    if (await isVolcanoOwner(volcanoId, userId)) {
+        console.log(volcanoId);
+        console.log(userId);
+        console.log(isVolcanoOwner(volcanoId, userId));
+        
+        return res.redirect(`/404`)
+    }
+
+    try {
+        await volcanoService.vote(volcanoId, userId);
+
+        res.redirect(`/volcanoes/${volcanoId}/details`);
+    } catch (err) {
+        console.log(err.message);
+    }
+});
+
 volcanoController.get("/:volcanoId/delete", isAuth, async (req, res) => {
-    if (!isVolcanoOwner(req.params.volcanoId, req.user._id)) {
+    if (!(await isVolcanoOwner(req.params.volcanoId, req.user._id))) {
         return res.redirect("/404")
     }
 

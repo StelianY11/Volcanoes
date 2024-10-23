@@ -20,6 +20,9 @@ const volcanoService = {
         return Volcano.findById(volcanoId);
     },
     vote(volcanoId, userId) {
+        console.log(volcanoId);
+        console.log(userId);
+        
         return Volcano.findByIdAndUpdate(volcanoId, { $push: { voteList: userId } });
     },
     remove(volcanoId) {
